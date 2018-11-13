@@ -1,0 +1,202 @@
+---
+title: "Assignment 9"
+author: "Tavish Boyle"
+date: "October 13, 2018"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+titanic = read.csv("train.csv")
+# Remove some columns
+titanic$PassengerId =  NULL
+titanic$Ticket =  NULL
+titanic$Name = NULL
+titanic$Cabin = NULL
+
+# Correct variables' types
+titanic$Survived = factor(titanic$Survived)
+titanic$Pclass = factor(titanic$Pclass)
+
+# Handle missing values
+
+levels(titanic$Embarked) = c("S","C","Q","S")
+
+```
+
+Function 1
+Write a function that inputs a dataset (data frame) and outputs the number of missing values in each variables  
+```{r, include=TRUE}
+F1 <- function(df){
+  sapply(df, function(df) sum(is.na(df)))
+}
+
+F1(titanic)
+```
+
+Function 2
+Write a function that inputs a dataset and outputs the names of variables with missing values.
+```{r, include=TRUE}
+F2 <- function(df){
+  sapply(df, function(df) sum(is.na(df)))
+}
+
+F2(titanic)
+```
+
+Function 3
+Write a function that inputs a dataset and outputs (1) the names of variables with missing values and (2) the corresponding number of missing values in each variables.
+
+```{r, include=TRUE}
+F3 <- function(df){
+  sapply(df, function(df) sum(is.na(df)))
+}
+F3(titanic)
+```
+
+Function 4
+Write a function that inputs a dataset and output a dataset with missing values handled as follows:
+-	Missing values of numeric variables are replaced by the means of the non-missing values in the variables 
+-	Missing values of categorical variables are replaced by the most frequent category in the variables
+
+```{r, include=TRUE}
+F4 <- function(df){
+  for (i in 1:ncol(df)){
+    if (is.numeric(df[,i])){
+      df[,i][is.na(df[,i])]=mean(df[,i], na.rm=TRUE)
+    }else{
+      levels=unique(df[,i])
+      df[,i][is.na(df[,i])]=levels[which.max(tabulate(match(df[,i], levels)))]
+    }
+  }
+  return (head(df))
+}
+F4(titanic)
+```
+
+Function 5
+Write a function that input a dataset and output (1) sub-dataset containing categorical variables and (2) sub-dataset containing numeric variables.
+```{r, include = TRUE}
+F5 <-  function(df){
+  num <- sapply(df, is.numeric)
+  numeric <- data.frame(df[,num])
+  print(numeric)
+  
+  cat <- sapply(df, is.factor)
+  categorical <- data.frame(df[,cat])
+  print(categorical)
+}
+F5(titanic)
+```
+
+Function 6
+Write a function that inputs a dataset and output density curves of all numeric variables.
+```{r, include = TRUE}
+F6 <- function(x){
+  for (i in 1:ncol(x)){
+    if (is.numeric(x[,i])){
+      print(ggplot(data=x)+geom_density(mapping=aes(x=x[,i]))+xlab(names(x)[i]))
+    }
+  }
+}
+F6(titanic)
+```
+
+Function 7
+Write a function that inputs a dataset and output bar charts of all categorical variables.
+```{r, include=TRUE}
+F7<- function(x){
+  for (i in 1:ncol(x)){
+    if (is.factor(x[,i])){
+      print(ggplot(data=x)+geom_bar(mapping=aes(x=x[,i]))+xlab(names(x)[i]))
+    }
+  }
+}
+F7(titanic)
+```
+
+Function 8
+Write a function that inputs a dataset and two number i, j and outputs bar charts of column i and column j.  If either i or j are not categorical variables, output a message saying so.
+```{r, inlcude=TRUE}
+F8 <- function(x, i, j){
+ if(is.numeric(x[,i]) | is.numeric(x[,j])){
+    print("At least one of the columns is not categorical")
+  }else{
+    print(ggplot(data=x)+geom_bar(mapping=aes(x=x[,i],fill=x[,j]),position="dodge")+labs(x=names(x)[i],fill=names(x)[j]))
+  }
+}
+F8(titanic, 3, 8)
+```
+
+Function 9
+Write a function that inputs a dataset and two number i, j and outputs the scatter plot of column i and column j. If either i or j are not numeric variables, output a message saying so.
+```{r, include=TRUE}
+F9 <- function(x, i, j){
+  if(!is.numeric(x[,i]) | !is.numeric(x[,j])){
+    print("At least one of the columns is not numeric")
+  }else{
+    print(ggplot(data=x)+geom_point(mapping=aes(x=x[,i],y=x[,j]))+labs(x=names(x)[i],y=names(x)[j]))
+  }
+}
+F9(titanic, 7, 4)
+```
+
+Function 10
+Write a function that inputs a dataset and two number i, j and output the density curves of column i partitioning on categories of column j. If the two columns are not suitable for the graph, print out the message saying so. 
+```{r, include=TRUE}
+F10 <- function(x, i, j){
+  if(!is.numeric(x[,i])){
+    print("The input variable is not numeric")
+  }else if(is.numeric(x[,j])){
+    print("The partitioning variable is not categorical")
+  }else{
+    print(ggplot(data=x)+geom_density(mapping=aes(x=x[,i],color=x[,j]))+labs(x=names(x)[i],color=names(x)[j]))
+  }
+}
+F10(titanic,7,3)
+```
+
+
+Function 11
+Write a function that inputs a dataset and output all possible bar charts of pair of variables in the dataset. 
+```{r, include=TRUE}
+F11 <- function(x){
+  for (i in 1:ncol(x)){
+      if (!is.numeric(x[,i])){
+        for(j in 1:ncol(x)){
+          if (!is.numeric(x[,j]) & names(x)[j]!=names(x)[i]){
+            print(ggplot(data=x)+geom_bar(mapping=aes(x=x[,i],fill=x[,j]),position="dodge")+ labs(x=names(x)[i],fill=names(x)[j]))
+          }
+        }
+      }
+    }
+}
+F11(titanic)
+```
+
+
+Function 13
+Write a function that do visualization of a dataset, i.e. the function should output a set of several graphs of the variables
+```{r, include=TRUE}
+F13 <- function(x){
+  for (i in 1:ncol(x)){
+      if (!is.numeric(x[,i])){
+        for(j in 1:ncol(x)){
+          if (!is.numeric(x[,j]) & names(x)[j]!=names(x)[i]){
+            print(ggplot(data=x)+geom_bar(mapping=aes(x=x[,i],fill=x[,j]),position="dodge")+ labs(x=names(x)[i],fill=names(x)[j]))
+          }
+        }
+      }else{
+        for(j in 1:ncol(x)){
+          if (!is.numeric(x[,j])){
+            print(ggplot(data=x)+geom_density(mapping=aes(x=x[,i],color=x[,j]))+labs(x=names(x)[i],color=names(x)[j]))
+          }
+        }
+      }
+  }
+}
+F13(titanic)
+```

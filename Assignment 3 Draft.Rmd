@@ -1,0 +1,146 @@
+---
+title: "Assignment 3"
+author: "Tavish Boyle"
+date: "September 24, 2018"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+titanic = read.csv("titanic.csv")
+```
+
+## Assignment 3
+
+
+
+Steps preparing the data set "titanic_omit". 
+
+```{r titanic, echo=TRUE}
+titanic$Survived = factor(titanic$Survived)
+```
+
+#1.	Check if there is any missing data
+```{r, echo = TRUE}
+sum(is.na(titanic$Age))
+
+```
+
+#2.Replace missing values by the variable's average  for numeric variables
+```{r, echo = TRUE}
+titanic$Age[is.na(titanic$Age)] = mean(titanic$Age, na.rm = TRUE)
+```
+
+#3.	Remove the rows that have missing categorical values 
+```{r, echo = TRUE}
+titanic_omit <- na.omit(titanic)
+```
+
+#4.	Remove column names, ID and unnecessary columns 
+```{r, echo = TRUE}
+titanic_omit$Name = NULL
+titanic_omit$PassengerId = NULL
+titanic_omit$Ticket = NULL
+titanic_omit$SibSp = NULL
+titanic_omit$Cabin = NULL
+```
+
+#5.	Calculate the mean age
+```{r, echo = TRUE}
+mean(titanic_omit$Age)
+```
+
+#6.	Calculate the mean age of female passengers
+```{r, echo = TRUE}
+mean(titanic_omit[titanic_omit$Sex == "female",]$Age)
+```
+
+#7.	Calculate the median fare of the passengers in Class 1
+```{r, echo = TRUE}
+median(titanic_omit[titanic_omit$Pclass == 1,]$Fare)
+```
+
+#8.	Calculate the median fare of the female passengers that are not in Class 1
+```{r, echo = TRUE}
+median(titanic_omit[titanic_omit$Pclass != 1,]$Fare)
+```
+
+#9.	Calculate the median age of survived passengers who are female and Class 1 or Class 2
+```{r, echo = TRUE}
+median(titanic_omit[titanic_omit$Pclass == 1 | titanic_omit$Pclass == 2 & titanic_omit$Survived == 1 & titanic_omit$Sex == "female",]$Age)
+```
+
+#10. Calculate the mean fare of female teenagers survived passengers
+```{r, echo = TRUE}
+mean(titanic_omit[titanic_omit$Age < 20 & titanic_omit$Survived == 1 & titanic_omit$Sex == "female",]$Fare)
+```
+
+#11.	Calculate the mean fare of female teenagers survived passengers for each class
+```{r, echo = TRUE}
+mean(titanic_omit[titanic_omit$Age < 20 & titanic_omit$Survived == 1 & titanic_omit$Sex == "female" & titanic_omit$Pclass == 1,]$Fare)
+```
+
+```{r, echo = TRUE}
+mean(titanic_omit[titanic_omit$Age < 20 & titanic_omit$Survived == 1 & titanic_omit$Sex == "female" & titanic_omit$Pclass == 2,]$Fare)
+```
+
+```{r, echo = TRUE}
+mean(titanic_omit[titanic_omit$Age < 20 & titanic_omit$Survived == 1 & titanic_omit$Sex == "female" & titanic_omit$Pclass == 3,]$Fare)
+``` 
+
+#12.	Calculate the ratio of Survived and not Survived for passengers who are who pays more than the average fare 
+```{r, echo = TRUE}
+(nrow(titanic_omit[titanic_omit$Fare >= median(titanic_omit$Fare) & titanic_omit$Survived == 1,])) / (nrow(titanic_omit[titanic_omit$Fare >= median(titanic_omit$Fare) & titanic_omit$Survived == 0,]))
+```
+
+#13.	Add column that standardizes the fare (subtract the mean and divide by standard deviation) and name it sfare
+```{r, echo = TRUE}
+stdevfare = sd(titanic_omit$Fare)
+avgfare = mean(titanic_omit$Fare)
+titanic_omit$Sfare <- (titanic_omit$Fare - avgfare) / stdevfare
+```
+
+#14.	Plot the bar chart of two variables: Sex and Survived for passengers younger than the average age 
+```{r, echo = TRUE}
+ggplot(titanic_omit)+geom_bar(mapping = aes(x = titanic_omit$Survived == 1 & titanic_omit$Age <= mean(titanic_omit$Age), fill = Sex))
+```
+
+#15.	Plot the density of age of passengers who survived and pay more than the average fare
+```{r, echo = TRUE}
+ggplot(titanic_omit)+geom_density(mapping = aes(x = titanic_omit$Survived == 1 & titanic_omit$Fare >= mean(titanic_omit$Fare)))
+```
+
+#16.	Plot two density curves in one graph of passengers embarked in Southampton and Queenstown
+```{r, echo = TRUE}
+ggplot(titanic_omit)+geom_density(mapping = aes(x = titanic_omit$Embarked == "S", color = "Southampton")) + geom_density(mapping = aes(x = titanic_omit$Embarked == "Q", color = "Queenstown"))
+```
+
+#17.	Add categorical variable named "cfare" that takes value "cheap" for passengers paying less the average fare and takes value "expensive" for passengers paying more than the average fare.  
+```{r, echo = TRUE}
+titanic_omit$cfare <- ifelse(titanic_omit$Fare<34.69, "Cheap", "Expensive")
+```
+
+#18.	Add categorical variable named "cage" that takes value 0 for age 0-10, 1 for age 10-20, 2 for age 20-30, and so on 
+```{r, echo = TRUE}
+
+titanic_omit$cage[titanic_omit$Age<=10] <- 0
+titanic_omit$cage[titanic_omit$Age>10 & titanic_omit$Age<=20] <- 1
+titanic_omit$cage[titanic_omit$Age>20 & titanic_omit$Age<=30] <- 2
+titanic_omit$cage[titanic_omit$Age>30 & titanic_omit$Age<=40] <- 3
+titanic_omit$cage[titanic_omit$Age>40 & titanic_omit$Age<=50] <- 4
+titanic_omit$cage[titanic_omit$Age>50 & titanic_omit$Age<=60] <- 5
+titanic_omit$cage[titanic_omit$Age>60 & titanic_omit$Age<=70] <- 6
+titanic_omit$cage[titanic_omit$Age>70 & titanic_omit$Age<=80] <- 7 
+```
+
+#19.	Plot bar chart of two variables cage and Survived for passengers paying more than the average 
+```{r, echo = TRUE}
+ggplot(titanic_omit[titanic_omit$Fare < mean(titanic_omit$Fare),]) + geom_bar(mapping = aes(x = cage, fill = Survived))
+```
+
+#20.	Split the bar chart in 18 by Pclass.
+```{r, echo = TRUE}
+ggplot(titanic_omit[titanic_omit$Fare < mean(titanic_omit$Fare),]) + geom_bar(mapping = aes(x = cage, fill = Survived)) + facet_wrap(~Pclass)
+```
+

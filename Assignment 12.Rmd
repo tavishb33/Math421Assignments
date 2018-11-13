@@ -1,0 +1,170 @@
+---
+title: "Assignment 12"
+author: "Tavish Boyle"
+date: "October 29, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(caret)
+library(ranger)
+
+adult=read.csv("C:/Users/student/Documents/Senior Year/Statistical Analysis with R/Data/adult.csv", header = FALSE)
+
+colnames(adult) <- c("age", "workclass", "fnlwgt", "education", "education_num", "marital_status", "occupation", "relationship", "race", "sex", "capital_gain", "capital_loss", "hours_per_week", "native_country", "salary")
+
+titanic=read.csv("C:/Users/student/Documents/Senior Year/Statistical Analysis with R/Data/train.csv", header = FALSE)
+
+colnames(titanic) <- c("PassengerId", "Survived", "Pclass", "Name", "Sex", "Age", "SibSp", "Parch", "Ticket", "Fare", "Cabin", "Embarked")
+
+# Correct variables' types
+titanic$Survived = factor(titanic$Survived)
+titanic$Pclass = factor(titanic$Pclass)
+
+# Remove some columns
+titanic$PassengerId =  NULL
+titanic$Ticket =  NULL
+titanic$Name = NULL
+titanic$Cabin = NULL
+
+```
+
+
+##1.	Preprocess the data so that it is ready to train predictive models.
+```{r}
+
+for(i in 1:ncol(adult)) {
+    adult[adult ==" ?"]= NA  
+    blanks <- sum(is.na(adult[i]))
+    if(blanks > 0){
+      if(is.numeric(adult[[i]]) == TRUE) {
+        adult = preProcess(adult, method = "medianImpute") 
+      }
+      else {
+        levels=unique(adult[,i])
+        adult[,i][is.na(adult[,i])]=levels[which.max(tabulate(match(adult[,i], x = levels)))]
+      }
+    }
+}
+
+
+for(i in 1:ncol(titanic)) {
+    titanic[titanic == ""]= NA  
+    blanks <- sum(is.na(titanic[i]))
+    if(blanks > 0){
+      if(is.numeric(titanic[[i]]) == TRUE) {
+        titanic = preProcess(titanic, method = "medianImpute") 
+      }
+      else {
+        levels=unique(titanic[,i])
+        titanic[,i][is.na(titanic[,i])]=levels[which.max(tabulate(match(titanic[,i], x = levels)))]
+      }
+    }
+}
+
+
+
+
+```
+
+##2.	Train a random forest with 7-fold cross validation.  Report the accuracy of the forest.
+```{r}
+splitIndex <- createDataPartition(adult$salary, p = .70, list = FALSE, times = 1)
+adult_train <- adult[ splitIndex,]
+adult_test <- adult[-splitIndex,]
+
+dt_adult <- train(salary ~.,data = adult_train, method = "rpart", 
+               trControl = trainControl(method ="cv", number = 7, verboseIter =  TRUE))
+
+splitIndex2 <- createDataPartition(titanic$Survived, p = .70, list = FALSE, times = 1)
+titanic_train <- titanic[ splitIndex2,]
+titanic_test <- titanic[-splitIndex2,]
+
+dt_titanic <- train(Survived ~.,data = titanic_train, method = "rpart", 
+               trControl = trainControl(method ="cv", number = 7, verboseIter = TRUE))
+
+dt_adult
+dt_titanic
+```
+
+##3.	Train a decision tree with 10-fold cross validation.  Report the accuracy. 
+```{r}
+splitIndex <- createDataPartition(adult$salary, p = .70, list = FALSE, times = 1)
+adult_train <- adult[ splitIndex,]
+adult_test <- adult[-splitIndex,]
+
+dt_adult <- train(salary ~.,data = adult_train, method = "rpart", 
+               trControl = trainControl(method ="cv", number = 10, verboseIter =  TRUE))
+
+splitIndex2 <- createDataPartition(titanic$Survived, p = .70, list = FALSE, times = 1)
+titanic_train <- titanic[ splitIndex2,]
+titanic_test <- titanic[-splitIndex2,]
+
+dt_titanic <- train(Survived ~.,data = titanic_train, method = "rpart", 
+               trControl = trainControl(method ="cv", number = 10, verboseIter = TRUE))
+
+dt_adult
+dt_titanic
+```
+
+##4.	What are the selection of the hyperparameters (mtry, splitrule, min.mode.size) in the random forest in 2? 
+``` {r}
+print(dt_titanic)
+print(dt_adult)
+```
+
+##5.	Print out the plot of the random forest.
+```{r}
+plot(dt_titanic)
+plot(dt_adult)
+```
+
+
+##6.       Tune the three hyperparameters of the random forest with mtry running all its possible values, splitrule running all its possible values (gini and extratrees) and min.node.size running from 1 to 20
+```{r}
+#adult
+myGrid  = expand.grid(mtry = 3, splitrule = c("gini", "extratrees"), min.node.size = c(1:4))
+
+modelA3 <- train(salary~., tuneLength = 1, data = adult, method = "ranger", trControl = trainControl(method = "cv", number = 3, verboseIter = TRUE), tuneGrid=myGrid)
+
+predA3=predict(modelA3, adult)
+levels(adult$salary) = c(" <=50K", " >50K")
+levels(predA3) = c(" <=50K", " >50K")
+cmA3=confusionMatrix(predA3, adult$salary, positive= " >50K")
+cmA3
+
+#titanic
+myGrid  = expand.grid(mtry = 3, splitrule = c("gini", "extratrees"), min.node.size = c(1:4))
+
+modelT3 <- train(Survived~., tuneLength = 1, data = titanic, method = "ranger", trControl = trainControl(method = "cv", number = 3, verboseIter = TRUE), tuneGrid=myGrid)
+
+predT3=predict(modelT3, titanic)
+levels(titanic$Survived) = c("0", "1")
+levels(predT3) = c("0", "1")
+cmT3=confusionMatrix(predT3, titanic$Survived, positive= "1")
+cmT3
+```
+
+##7. Print out the tuning plot of the random forest.  Does your tuned random forest in 6 achieve better accuracy than the default random forest in 2? 
+```{r}
+plot(modelA3)
+plot(modelT3)
+```
+
+##8.	Compare the performances of the default glmnet model and a tuned glmnet model. Do you achieve better performance in the tuned glmnet model? 
+```{r}
+myGrid3=expand.grid(.alpha=0:1,.lambda=seq(0.001,1,length=10))
+
+model_glm_a=train(target~., data=adult_train, method="glmnet")
+model_glm2_a=train(target~., data=adult_train, method="glmnet", tuneGrid=myGrid3)
+plot(model_glm_a)
+plot(model_glm2_a)
+
+model_glm_t=train(Survived~., data=titanic_train, method="glmnet")
+model_glm2_t=train(Survived~., data=titanic_train, method="glmnet", tuneGrid=myGrid3)
+plot(model_glm_t)
+plot(model_glm2_t)
+
+```

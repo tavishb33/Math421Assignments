@@ -1,0 +1,71 @@
+---
+title: "Assignment 1"
+author: "Tavish Boyle"
+date: "September 12, 2018"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Titanic Data Analysis
+
+This report is intended to discern relevant information from the data set "Titanic". The variables throughout the data set can be found below. the data will be broken down into relevant graphs and commentary will provide information explaining the information represented by the graphs. 
+
+```{r titanic, echo = FALSE}
+titanic = read.csv("titanic.csv")
+str(titanic)
+```
+
+## Relevant Plots
+
+Below you can find seven plots that aid in the analysis of the titanic data. The commentary for each graph is located below each graph.
+```{r warning=FALSE, echo = FALSE}
+library(ggplot2)
+
+ggplot(titanic) + geom_bar(mapping = aes(x = Age), position = "dodge")
+```
+
+This first plot clarifies the age range of passengers onboard the titanic.As you can see the majority of the passengers were relatively young, within the 18-38 years old range. The youngest passengers appear to be only a few months old while the oldest passengers are 80 years old. Regardless of age, the loss of life in htis event was truly tragic.
+
+```{r,echo = FALSE}
+library(ggplot2)
+
+ggplot(titanic) + geom_bar(mapping = aes(x = Pclass, fill = Sex), position = "dodge")
+```
+
+This plot breaks down passengers into the classes onboard the ship. Between the first and second class there was a pretty even split between genders. Males out numbered females slightly within the first two classes. The gender values in the third class are quite interesting. There are more than two males for every female in third class.
+
+``` {r, echo = FALSE}
+ggplot(titanic) + geom_bar(mapping = aes(x = Embarked), position = "dodge")
+```
+
+The plot above distinguished from which port or boarding site, passengers entered the ship. The key to the plot is: C = Cherbourg, Q = Queenstown, S = Southampton. The large majority of the passengers embarked on their journey from Southhampton. 
+
+```{r, echo = FALSE}
+ggplot(titanic) + geom_bar(mapping = aes(x = Survived), position = "dodge")
+```
+
+This plot breaks down the survival of all passengers aboard the Titanic. Roughly 340 passengers survived and 550 passengers perished in the infamous accident that occurred on the ship's maiden voyage. 
+
+```{r,echo = FALSE}
+ggplot(titanic) + geom_bar(mapping = aes(x = Survived, fill = Sex), position = "dodge")
+```
+
+Breaking down the survival further, it is made clear by the graph above that more females survived than males. Percentage wise it appears that roughly 20% of males survived the event. on the female side it appears that roughly 70% of females survived the event.
+
+```{r, echo = FALSE}
+ggplot(titanic) + geom_bar(mapping = aes(x = Parch), position = "dodge")
+```
+
+This plot is relevant because it exposes how many passengers were traveling without family members. The majority of passengers didnt have and parents or children on board. From a familial perspective this is reieving to see because an event such as this could have easily claimed the lives of a whole family, if they had all been on board. 
+
+```{r echo= FALSE, warning=FALSE}
+ggplot(titanic) + geom_boxplot(mapping = aes(x = Sex, y = Age), position = "dodge")
+```
+
+The final boxplot more accurately describes the age of the passengers onboard the titanic as well as their genders. The average age of females appears to be just over 25 years old while the average age of males appears to right under 30 years of age. It is also important to note that males have more outliers on the top end of the age range, reaching up to eighty years old at the maximum. 
+
+## Conclusion
+
+In conclusion, the Titanic was an extremely tragic event in which many passengers lives were lost. The male gender suffered the most casualities by percentage. Many passengers did not have more than 2 other family members onboard the ship. Additionally, the age of passengers ws very divcerse ranging from months old all the way up to eighty years old. May all the lives lost never be forgotten. 

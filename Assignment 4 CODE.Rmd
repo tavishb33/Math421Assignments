@@ -1,0 +1,93 @@
+---
+title: "Assignment 4"
+author: "Tavish Boyle"
+date: "October 5, 2018"
+output: word_document
+---
+
+
+##Question 1
+```{r, include=TRUE}
+titanic = read.csv("titanic.csv")
+
+f1 <- function(x) {
+  x^2+3*x+1
+}
+
+f1(18)
+```
+
+
+##Question 2
+```{r, include=TRUE}
+f2 <- function(x) {
+  prod(x)
+}
+x <- c(7,13,521,687)
+f2(x)
+```
+
+
+##Question 3
+```{r, include=TRUE}
+f3 <- function(v,n) {
+  v[is.na(v)] <- n
+  return(v)
+}
+
+v3 <- c(NA, NA, 21)
+f3(v3,6)
+```
+
+
+##Question 4
+```{r, include=TRUE}
+f4 <- function(x) {
+  avg <- mean(x, na.rm = TRUE)
+  x[is.na(x)] <- avg
+  return(x)
+}
+v4 <- c(13, 14, NA)
+f4(v4)
+```
+
+
+##Question 5
+#Couldn't fully figure this one out
+#```{r, include=TRUE}
+#f5 <- function(df) {
+#  varcount <- ncol(df)
+#  for (i in 1:varcount) {
+#      if(is.numeric(df[[i]]) == TRUE) {
+#         df[[i]][is.na(df[[i]])] <- mean(df[[i]], na.rm = TRUE)
+#      }
+#  }
+#  return(df)
+#}
+```
+
+
+
+##Question 6
+```{r, include=TRUE}
+f6 <- function(df, var1) {
+    library(ggplot2)
+    rt = ggplot(data = df) + geom_bar(mapping = aes(x = df[,var1]))
+  return(rt)
+}
+f6(titanic, 5)
+
+```
+
+
+
+##Question 7
+```{r, include=TRUE}
+f7 <- function(df, var1, var2) {
+    library(ggplot2)
+    rt = ggplot(data = df) + geom_bar(mapping = aes(x = df[,var1], fill =
+      df[,var2]), position = "dodge")
+    return(rt)
+}
+f7(titanic, 5, 2)
+```

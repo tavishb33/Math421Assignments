@@ -1,0 +1,492 @@
+---
+title: "Assignment 11"
+author: "Tavish Boyle"
+date: "October 22, 2018"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(lattice)
+library(caret)
+library(ranger)
+library(e1071)
+
+adult=read.csv("C:/Users/student/Documents/Senior Year/Statistical Analysis with R/Data/adult.csv", header = FALSE)
+
+colnames(adult) <- c("age", "workclass", "fnlwgt", "education", "education_num", "marital_status", "occupation", "relationship", "race", "sex", "capital_gain", "capital_loss", "hours_per_week", "native_country", "salary")
+
+```
+
+##1.	Replace all the missing values by NA 
+```{r}
+adult[adult==' ?']=NA
+sum(is.na(adult))
+```
+
+##2.	Replace the categorical missing values by the mode of the corresponding variables
+```{r}
+missingval=function(x) {
+  for(i in 1:ncol(x)){
+    if(!is.numeric(x[,i])){
+      levels=unique(x[,i])
+      x[,i][is.na(x[,i])]=levels[which.max(tabulate(match(x, levels)))]
+    }
+  }
+  return(x)
+}
+adult2=missingval(adult)
+sum(is.na(adult2))
+```
+
+##3.	Replace the numeric missing values by the median using caret
+
+```{r}
+num_miss=preProcess(adult2, method='medianImpute')
+adult6=predict(num_miss, newdata = adult2)
+sum(is.na(adult6))
+```
+
+
+
+##4.	The variable "native country" has 16 categories. Group the categories of this variable into 5 categories.  Do the same for all categorical variables with more than 10 categories. 
+```{r}
+adult6$native_country=as.character(adult6$native_country)
+adult6$education=as.character(adult6$education)
+adult6$occupation=as.character(adult6$occupation)
+
+adult6$native_country[adult6$native_country==" United-States"|adult6$native_country==" Canada"|adult6$native_country==" Mexico"|adult6$native_country==" Cuba"|adult6$native_country==" Dominican-Republic"|adult6$native_country==" El-Salvador"|adult6$native_country==" Guatemala"|adult6$native_country==" Haiti"|adult6$native_country==" Honduras"|adult6$native_country==" Jamaica"|adult6$native_country==" Nicaragua"]="N. America"
+
+adult6$native_country[adult6$native_country==" Cambodia"|adult6$native_country==" China"|adult6$native_country==" Hong"|adult6$native_country==" India"|adult6$native_country==" Iran"|adult6$native_country==" Japan"|adult6$native_country==" Laos"|adult6$native_country==" Philippines"|adult6$native_country==" Taiwan"|adult6$native_country==" Thailand"|adult6$native_country==" Vietnam"]="Asia"
+
+adult6$native_country[adult6$native_country==" England"|adult6$native_country==" France"|adult6$native_country==" Germany"|adult6$native_country==" Greece"|adult6$native_country==" Holand-Netherlands"|adult6$native_country==" Hungary"|adult6$native_country==" Ireland"|adult6$native_country==" Italy"|adult6$native_country==" Poland"|adult6$native_country==" Portugal"|adult6$native_country==" Scotland"|adult6$native_country==" Yugoslavia"]="Euro"
+
+adult6$native_country[adult6$native_country==" South"|adult6$native_country==" Outlying-US(Guam-USVI-etc)"|adult6$native_country==" Puerto-Rico"]="Other"
+
+adult6$native_country[adult6$native_country==" Columbia"|adult6$native_country==" Ecuador"|adult6$native_country==" Peru"|adult6$native_country==" Trinadad&Tobago"]="S. America"
+
+adult6$education[adult6$education==" HS-grad"|adult6$education==" 12th"|adult6$education==" 11th"|adult6$education==" 10th"|adult6$education==" 9th"]="H. School"
+
+adult6$education[adult6$education==" Some-college"|adult6$education==" Assoc-acdm"|adult6$education==" Assoc-voc"]="Some College"
+
+adult6$education[adult6$education==" 5th-6th"|adult6$education==" 7th-8th"]="Mid. School"
+
+adult6$education[adult6$education==" Preschool"|adult6$education==" 1st-4th"]="Ele. School"
+
+adult6$education[adult6$education==" Bachelors"|adult6$education==" Masters"|adult6$education==" Doctorate"|adult6$education==" Prof-school"]="Degree"
+
+
+adult6$occupation[adult6$occupation==" Armed-Forces"|adult6$occupation==" Protective-serv"]="Defence"
+adult6$occupation[adult6$occupation==" Craft-repair"|adult6$occupation==" Farming-fishing"|adult6$occupation==" Handlers-cleaners"|adult6$occupation==" Machine-op-inspct"|adult6$occupation==" Transport-moving"]="Physical"
+adult6$occupation[adult6$occupation==" Adm-clerical"|adult6$occupation==" Exec-managerial"|adult6$occupation==" Sales"|adult6$occupation==" Tech-support"]="Office"
+adult6$occupation[adult6$occupation==" Prof-specialty"]="Teaching"
+adult6$occupation[adult6$occupation==" Other-service"|adult6$occupation==" Priv-house-serv"]="Misc"
+
+adult6$native_country=as.factor(adult6$native_country)
+adult6$education=as.factor(adult6$education)
+adult6$occupation=as.factor(adult6$occupation)
+
+levels(adult6$native_country)
+levels(adult6$education)
+levels(adult6$occupation)
+
+```
+
+##5.Encoding categorical variable using one hot encoding (dummy encoding) 
+```{r}
+dummies_model <- dummyVars(salary ~ ., data=adult)
+adultData_mat <- predict(dummies_model, newdata = adult)
+
+adultData <- data.frame(adultData_mat)
+adultData$salary <- adult$salary
+
+```
+
+##6.	Scale and center the data
+```{r}
+preProcess_missingdata_model <- preProcess(adult6, method= c("center", "scale"))
+preProcess_missingdata_model
+
+```
+
+##7.	Split the data into training (70%) and testing (30%) with the seeding set to be 2018 [including the code: set.seed(2018)]. Build a decision tree and report the accuracy and balanced accuracy
+```{r}
+splitIndex <- createDataPartition(adult6$salary, p = .70, list = FALSE, times = 1)
+train <- adult6[ splitIndex,]
+test <- adult6[-splitIndex,]
+```
+
+##8.	Build a random forest using the ranger package.  Report the accuracy and balanced accuracy
+```{r}
+library(ranger)
+model = ranger(salary ~., data = train)
+pred3  = predict(model, data = test)$predictions
+cm3 = confusionMatrix(pred3, test$salary, positive=" >50K")
+print(cm3)
+
+```
+
+##9.	Redo 3 with missing values being replaced by the mean.  Rebuild the model and report the models' performances (the accuracy and balanced accuracy). 
+```{r}
+#3
+miss_num=function(x){
+  for (i in 1:ncol(x)){
+    if (is.numeric(x[,i])){
+      x[,i][is.na(x[,i])]=mean(x[,i], na.rm=TRUE)
+    }
+  }
+  return(x)
+}
+adult4=miss_num(adult2)
+sum(is.na(adult4))
+
+
+
+#4
+adult4$native_country=as.character(adult4$native_country)
+adult4$education=as.character(adult4$education)
+adult4$occupation=as.character(adult4$occupation)
+
+adult4$native_country[adult4$native_country==" United-States"|adult4$native_country==" Canada"|adult4$native_country==" Mexico"|adult4$native_country==" Cuba"|adult4$native_country==" Dominican-Republic"|adult4$native_country==" El-Salvador"|adult4$native_country==" Guatemala"|adult4$native_country==" Haiti"|adult4$native_country==" Honduras"|adult4$native_country==" Jamaica"|adult4$native_country==" Nicaragua"]="N. America"
+
+adult4$native_country[adult4$native_country==" Cambodia"|adult4$native_country==" China"|adult4$native_country==" Hong"|adult4$native_country==" India"|adult4$native_country==" Iran"|adult4$native_country==" Japan"|adult4$native_country==" Laos"|adult4$native_country==" Philippines"|adult4$native_country==" Taiwan"|adult4$native_country==" Thailand"|adult4$native_country==" Vietnam"]="Asia"
+
+adult4$native_country[adult4$native_country==" England"|adult4$native_country==" France"|adult4$native_country==" Germany"|adult4$native_country==" Greece"|adult4$native_country==" Holand-Netherlands"|adult4$native_country==" Hungary"|adult4$native_country==" Ireland"|adult4$native_country==" Italy"|adult4$native_country==" Poland"|adult4$native_country==" Portugal"|adult4$native_country==" Scotland"|adult4$native_country==" Yugoslavia"]="Euro"
+
+adult4$native_country[adult4$native_country==" South"|adult4$native_country==" Outlying-US(Guam-USVI-etc)"|adult4$native_country==" Puerto-Rico"]="Other"
+
+adult4$native_country[adult4$native_country==" Columbia"|adult4$native_country==" Ecuador"|adult4$native_country==" Peru"|adult4$native_country==" Trinadad&Tobago"]="S. America"
+
+adult4$education[adult4$education==" HS-grad"|adult4$education==" 12th"|adult4$education==" 11th"|adult4$education==" 10th"|adult4$education==" 9th"]="H. School"
+
+adult4$education[adult4$education==" Some-college"|adult4$education==" Assoc-acdm"|adult4$education==" Assoc-voc"]="Some College"
+
+adult4$education[adult4$education==" 5th-6th"|adult4$education==" 7th-8th"]="Mid. School"
+
+adult4$education[adult4$education==" Preschool"|adult4$education==" 1st-4th"]="Ele. School"
+
+adult4$education[adult4$education==" Bachelors"|adult4$education==" Masters"|adult4$education==" Doctorate"|adult4$education==" Prof-school"]="Degree"
+
+
+adult4$occupation[adult4$occupation==" Armed-Forces"|adult4$occupation==" Protective-serv"]="Defence"
+adult4$occupation[adult4$occupation==" Craft-repair"|adult4$occupation==" Farming-fishing"|adult4$occupation==" Handlers-cleaners"|adult4$occupation==" Machine-op-inspct"|adult4$occupation==" Transport-moving"]="Physical"
+adult4$occupation[adult4$occupation==" Adm-clerical"|adult4$occupation==" Exec-managerial"|adult4$occupation==" Sales"|adult4$occupation==" Tech-support"]="Office"
+adult4$occupation[adult4$occupation==" Prof-specialty"]="Teaching"
+adult4$occupation[adult4$occupation==" Other-service"|adult4$occupation==" Priv-house-serv"]="Misc"
+
+adult4$native_country=as.factor(adult4$native_country)
+adult4$education=as.factor(adult4$education)
+adult4$occupation=as.factor(adult4$occupation)
+
+levels(adult4$native_country)
+levels(adult4$education)
+levels(adult4$occupation)
+
+
+#5
+dummies_model <- dummyVars(salary ~ ., data=adult)
+adultData_mat <- predict(dummies_model, newdata = adult)
+
+adultData <- data.frame(adultData_mat)
+adultData$salary <- adult$salary
+
+
+
+#6
+preProcess_missingdata_model <- preProcess(adult4, method= c("center", "scale"))
+preProcess_missingdata_model
+
+
+#7
+splitIndex <- createDataPartition(adult4$salary, p = .70, list = FALSE, times = 1)
+train <- adult4[ splitIndex,]
+test <- adult4[-splitIndex,]
+
+
+#8
+library(ranger)
+model = ranger(salary ~., data = train)
+pred4  = predict(model, data = test)$predictions
+cm4 = confusionMatrix(pred4, test$salary, positive=" >50K")
+print(cm4)
+
+```
+
+##10.	Redo 3 with missing values being replaced by the "knn" imputation method.  Rebuild the model and report the models' performances (the accuracy and balanced accuracy)
+```{r}
+#3
+num_miss=preProcess(adult2, method='knnImpute')
+adult5=predict(num_miss, newdata = adult2)
+sum(is.na(adult5))
+
+
+#4
+adult5$native_country=as.character(adult5$native_country)
+adult5$education=as.character(adult5$education)
+adult5$occupation=as.character(adult5$occupation)
+
+adult5$native_country[adult5$native_country==" United-States"|adult5$native_country==" Canada"|adult5$native_country==" Mexico"|adult5$native_country==" Cuba"|adult5$native_country==" Dominican-Republic"|adult5$native_country==" El-Salvador"|adult5$native_country==" Guatemala"|adult5$native_country==" Haiti"|adult5$native_country==" Honduras"|adult5$native_country==" Jamaica"|adult5$native_country==" Nicaragua"]="N. America"
+
+adult5$native_country[adult5$native_country==" Cambodia"|adult5$native_country==" China"|adult5$native_country==" Hong"|adult5$native_country==" India"|adult5$native_country==" Iran"|adult5$native_country==" Japan"|adult5$native_country==" Laos"|adult5$native_country==" Philippines"|adult5$native_country==" Taiwan"|adult5$native_country==" Thailand"|adult5$native_country==" Vietnam"]="Asia"
+
+adult5$native_country[adult5$native_country==" England"|adult5$native_country==" France"|adult5$native_country==" Germany"|adult5$native_country==" Greece"|adult5$native_country==" Holand-Netherlands"|adult5$native_country==" Hungary"|adult5$native_country==" Ireland"|adult5$native_country==" Italy"|adult5$native_country==" Poland"|adult5$native_country==" Portugal"|adult5$native_country==" Scotland"|adult5$native_country==" Yugoslavia"]="Euro"
+
+adult5$native_country[adult5$native_country==" South"|adult5$native_country==" Outlying-US(Guam-USVI-etc)"|adult5$native_country==" Puerto-Rico"]="Other"
+
+adult5$native_country[adult5$native_country==" Columbia"|adult5$native_country==" Ecuador"|adult5$native_country==" Peru"|adult5$native_country==" Trinadad&Tobago"]="S. America"
+
+adult5$education[adult5$education==" HS-grad"|adult5$education==" 12th"|adult5$education==" 11th"|adult5$education==" 10th"|adult5$education==" 9th"]="H. School"
+
+adult5$education[adult5$education==" Some-college"|adult5$education==" Assoc-acdm"|adult5$education==" Assoc-voc"]="Some College"
+
+adult5$education[adult5$education==" 5th-6th"|adult5$education==" 7th-8th"]="Mid. School"
+
+adult5$education[adult5$education==" Preschool"|adult5$education==" 1st-4th"]="Ele. School"
+
+adult5$education[adult5$education==" Bachelors"|adult5$education==" Masters"|adult5$education==" Doctorate"|adult5$education==" Prof-school"]="Degree"
+
+
+adult5$occupation[adult5$occupation==" Armed-Forces"|adult5$occupation==" Protective-serv"]="Defence"
+adult5$occupation[adult5$occupation==" Craft-repair"|adult5$occupation==" Farming-fishing"|adult5$occupation==" Handlers-cleaners"|adult5$occupation==" Machine-op-inspct"|adult5$occupation==" Transport-moving"]="Physical"
+adult5$occupation[adult5$occupation==" Adm-clerical"|adult5$occupation==" Exec-managerial"|adult5$occupation==" Sales"|adult5$occupation==" Tech-support"]="Office"
+adult5$occupation[adult5$occupation==" Prof-specialty"]="Teaching"
+adult5$occupation[adult5$occupation==" Other-service"|adult5$occupation==" Priv-house-serv"]="Misc"
+
+adult5$native_country=as.factor(adult5$native_country)
+adult5$education=as.factor(adult5$education)
+adult5$occupation=as.factor(adult5$occupation)
+
+levels(adult5$native_country)
+levels(adult5$education)
+levels(adult5$occupation)
+
+
+#5
+dummies_model <- dummyVars(salary ~ ., data=adult5)
+adult5Data_mat <- predict(dummies_model, newdata = adult5)
+
+adult5Data <- data.frame(adult5Data_mat)
+adult5Data$salary <- adult5$salary
+
+
+#6
+preProcess_missingdata_model <- preProcess(adult5, method= c("center", "scale"))
+preProcess_missingdata_model
+
+#7
+splitIndex <- createDataPartition(adult5$salary, p = .70, list = FALSE, times = 1)
+train <- adult5[ splitIndex,]
+test <- adult5[-splitIndex,]
+
+
+#8
+library(ranger)
+model = ranger(salary ~., data = train)
+pred5  = predict(model, data = test)$predictions
+cm5 = confusionMatrix(pred5, test$salary, positive=" >50K")
+print(cm5)
+
+```
+
+##11.	Redo 6 with only scaling and centering the non-encoded variables. Rebuild the model and report the models' performances (the accuracy and balanced accuracy)
+```{r}
+num_miss=preProcess(adult2, method='medianImpute')
+adult6=predict(num_miss, newdata = adult2)
+sum(is.na(adult6))
+
+
+adult6$native_country=as.character(adult6$native_country)
+adult6$education=as.character(adult6$education)
+adult6$occupation=as.character(adult6$occupation)
+
+adult6$native_country[adult6$native_country==" United-States"|adult6$native_country==" Canada"|adult6$native_country==" Mexico"|adult6$native_country==" Cuba"|adult6$native_country==" Dominican-Republic"|adult6$native_country==" El-Salvador"|adult6$native_country==" Guatemala"|adult6$native_country==" Haiti"|adult6$native_country==" Honduras"|adult6$native_country==" Jamaica"|adult6$native_country==" Nicaragua"]="N. America"
+
+adult6$native_country[adult6$native_country==" Cambodia"|adult6$native_country==" China"|adult6$native_country==" Hong"|adult6$native_country==" India"|adult6$native_country==" Iran"|adult6$native_country==" Japan"|adult6$native_country==" Laos"|adult6$native_country==" Philippines"|adult6$native_country==" Taiwan"|adult6$native_country==" Thailand"|adult6$native_country==" Vietnam"]="Asia"
+
+adult6$native_country[adult6$native_country==" England"|adult6$native_country==" France"|adult6$native_country==" Germany"|adult6$native_country==" Greece"|adult6$native_country==" Holand-Netherlands"|adult6$native_country==" Hungary"|adult6$native_country==" Ireland"|adult6$native_country==" Italy"|adult6$native_country==" Poland"|adult6$native_country==" Portugal"|adult6$native_country==" Scotland"|adult6$native_country==" Yugoslavia"]="Euro"
+
+adult6$native_country[adult6$native_country==" South"|adult6$native_country==" Outlying-US(Guam-USVI-etc)"|adult6$native_country==" Puerto-Rico"]="Other"
+
+adult6$native_country[adult6$native_country==" Columbia"|adult6$native_country==" Ecuador"|adult6$native_country==" Peru"|adult6$native_country==" Trinadad&Tobago"]="S. America"
+
+adult6$education[adult6$education==" HS-grad"|adult6$education==" 12th"|adult6$education==" 11th"|adult6$education==" 10th"|adult6$education==" 9th"]="H. School"
+
+adult6$education[adult6$education==" Some-college"|adult6$education==" Assoc-acdm"|adult6$education==" Assoc-voc"]="Some College"
+
+adult6$education[adult6$education==" 5th-6th"|adult6$education==" 7th-8th"]="Mid. School"
+
+adult6$education[adult6$education==" Preschool"|adult6$education==" 1st-4th"]="Ele. School"
+
+adult6$education[adult6$education==" Bachelors"|adult6$education==" Masters"|adult6$education==" Doctorate"|adult6$education==" Prof-school"]="Degree"
+
+
+adult6$occupation[adult6$occupation==" Armed-Forces"|adult6$occupation==" Protective-serv"]="Defence"
+adult6$occupation[adult6$occupation==" Craft-repair"|adult6$occupation==" Farming-fishing"|adult6$occupation==" Handlers-cleaners"|adult6$occupation==" Machine-op-inspct"|adult6$occupation==" Transport-moving"]="Physical"
+adult6$occupation[adult6$occupation==" Adm-clerical"|adult6$occupation==" Exec-managerial"|adult6$occupation==" Sales"|adult6$occupation==" Tech-support"]="Office"
+adult6$occupation[adult6$occupation==" Prof-specialty"]="Teaching"
+adult6$occupation[adult6$occupation==" Other-service"|adult6$occupation==" Priv-house-serv"]="Misc"
+
+adult6$native_country=as.factor(adult6$native_country)
+adult6$education=as.factor(adult6$education)
+adult6$occupation=as.factor(adult6$occupation)
+
+levels(adult6$native_country)
+levels(adult6$education)
+levels(adult6$occupation)
+
+dummies_model <- dummyVars(salary ~ ., data = adult6)
+trainData_mat <- predict(dummies_model, newdata = adult6)
+
+trainData <- data.frame(trainData_mat)
+trainData$salary <- adult6$salary
+
+
+numdf <- c()
+catdf <- c()
+  for(i in 1:ncol(trainData)) {
+    if(is.numeric(trainData[,i])) {
+      numdf <- c(numdf, names(trainData)[i])
+    }
+    else {
+      catdf <- c(catdf, names(trainData)[i])
+    }
+  }
+  numdata <- trainData[numdf]
+  catdata <- trainData[catdf]
+
+
+trainData2 <- preProcess(numdata, method= c("center", "scale"))
+trainData2
+
+
+#7
+names(adult6)[15] = "salary"
+set.seed(2018)
+splitIndex <- createDataPartition(adult6$salary, p = .70, list = FALSE, times = 1)
+train <- adult6[ splitIndex,]
+test <- adult6[-splitIndex,]
+
+
+
+#8
+library(ranger)
+model = ranger(salary ~., data = train)
+pred10  = predict(model, data = test)$predictions
+cm10 = confusionMatrix(pred10, test$salary, positive=" >50K")
+print(cm10)
+
+```
+
+##12.	Redo 5 with a different encoding method. Rebuild the model and report the models' performances (the accuracy and balanced accuracy). 
+```{r}
+
+adult$workclass = as.numeric(adult$workclass)
+adult$education = as.numeric(adult$education)
+adult$marital_status = as.numeric(adult$marital_status)
+adult$occupation = as.numeric(adult$occupation)
+adult$relationship = as.numeric(adult$relationship)
+adult$race = as.numeric(adult$race)
+adult$sex = as.numeric(adult$sex)
+adult$native_country = as.numeric(adult$native_country)
+
+#1
+adult[adult==' ?']=NA
+sum(is.na(adult))
+
+#2
+missingval=function(x) {
+  for(i in 1:ncol(x)){
+    if(!is.numeric(x[,i])){
+      levels=unique(x[,i])
+      x[,i][is.na(x[,i])]=levels[which.max(tabulate(match(x, levels)))]
+    }
+  }
+  return(x)
+}
+adult2=missingval(adult)
+sum(is.na(adult2))
+
+#3
+num_miss=preProcess(adult2, method='medianImpute')
+adult7=predict(num_miss, newdata = adult2)
+sum(is.na(adult7))
+
+#5
+
+dummies_model <- dummyVars(salary ~ ., data=adult)
+adultData_mat <- predict(dummies_model, newdata = adult)
+
+adultData <- data.frame(adultData_mat)
+adultData$salary <- adult$salary
+
+#6
+preProcess_missingdata_model <- preProcess(adult7, method= c("center", "scale"))
+preProcess_missingdata_model
+
+#7
+splitIndex <- createDataPartition(adult7$salary, p = .70, list = FALSE, times = 1)
+train <- adult7[ splitIndex,]
+test <- adult7[-splitIndex,]
+
+
+#8
+library(ranger)
+model = ranger(salary ~., data = train)
+pred8  = predict(model, data = test)$predictions
+cm8 = confusionMatrix(pred8, test$salary, positive=" >50K")
+print(cm8)
+```
+
+
+##13.	Skip 4 to rebuild the models.  Do you find any improvement in the models' performances?  
+```{r}
+adult[adult==' ?']=NA
+sum(is.na(adult))
+
+#2
+missingval=function(x) {
+  for(i in 1:ncol(x)){
+    if(!is.numeric(x[,i])){
+      levels=unique(x[,i])
+      x[,i][is.na(x[,i])]=levels[which.max(tabulate(match(x, levels)))]
+    }
+  }
+  return(x)
+}
+adult2=missingval(adult)
+sum(is.na(adult2))
+
+#3
+num_miss=preProcess(adult2, method='medianImpute')
+adult8=predict(num_miss, newdata = adult2)
+sum(is.na(adult8))
+
+#5
+dummies_model <- dummyVars(salary ~ ., data=adult8)
+adult8Data_mat <- predict(dummies_model, newdata = adult8)
+
+adult8Data <- data.frame(adult8Data_mat)
+adult8Data$salary <- adult8$salary
+
+
+#6
+preProcess_missingdata_model <- preProcess(adult8, method= c("center", "scale"))
+preProcess_missingdata_model
+
+#7
+splitIndex <- createDataPartition(adult8$salary, p = .70, list = FALSE, times = 1)
+train <- adult8[ splitIndex,]
+test <- adult8[-splitIndex,]
+
+
+#8
+library(ranger)
+model = ranger(salary ~., data = train)
+pred6  = predict(model, data = test)$predictions
+cm6 = confusionMatrix(pred6, test$salary, positive=" >50K")
+print(cm6)
+```

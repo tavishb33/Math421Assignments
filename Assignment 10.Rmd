@@ -1,0 +1,137 @@
+---
+title: "Assignment 10"
+author: "Tavish Boyle"
+date: "October 17, 2018"
+output:
+  word_document: default
+  html_document: default
+---
+
+#1.	Download the adult dataset.  Change its extension to .csv
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#2.	Import to Rstudio setting the header = FALSE so that the first rows does not turn in to variable names.  This means:  df = read.csv("adult.csv", header = FALSE)
+```{r, include=TRUE}
+df = read.csv("C:/Users/student/Documents/Senior Year/Statistical Analysis with R/Data/adult.csv", header = FALSE, na.strings = c(" ?", "?", "."))
+```
+
+#3.	Change the variables' names to the appropriate ones.  You can use function names(df) to access the variables names. 
+
+```{r, include=TRUE}
+names(df)[1] <- "age"
+names(df)[2] <- "workclass"
+names(df)[3] <- "fnlwgt"
+names(df)[4] <- "education"
+names(df)[5] <- "education-num"
+names(df)[6] <- "marital-status"
+names(df)[7] <- "occupation"
+names(df)[8] <- "relationship"
+names(df)[9] <- "race"
+names(df)[10] <- "sex"
+names(df)[11] <- "capital-gain"
+names(df)[12] <- "capital-loss"
+names(df)[13] <- "hours-per-week"
+names(df)[14] <- "native-country"
+names(df)[15] <- "class"
+```
+
+
+#4.	Identify all the missing values.  Notice that missing values can be in the form of "NA", "?", "." and so on  
+```{r, include=TRUE}
+sum(is.na(df))
+```
+
+#5.	Replacing numeric missing values by the mean of the corresponding variables, and categorical missing values by the mode of the corresponding variables.
+```{r, include=TRUE}
+  for(i in 1:ncol(df))
+     if (is.factor(df[,i]))
+        levels=unique(df[,i])
+        df[,i][is.na(df[,i])]=levels[which.max(tabulate(match(df[,i], levels)))]
+      
+sum(is.na(df))
+```
+#6.	Perform data visualization on the data.  You should include, at least:
+#-Bar charts of two categorical variables
+#-	Density curves of numeric variables on the categories of categorical variables.  For example: plotting density curves of Age on female and male. 
+```{r, include = TRUE}
+library(ggplot2)
+ggplot(df, aes(x=relationship)) + geom_bar(aes(fill = sex), position = 'fill')
+
+ggplot(df, aes(x = sex)) + geom_density(aes(alpha = race))
+```
+
+#7.	Partition the data into training and testing data with ratio train : test = 60 : 40
+
+```{r, include=TRUE}
+names(df)[15] = "target"
+library(caret)
+library(lattice)
+splitIndex <- createDataPartition(df$target, p = .60, list = FALSE, times = 1)
+train <- df[splitIndex,]
+test <- df[-splitIndex,]
+```
+
+#8.	Build a decision tree model on the training data and test the model on the testing data
+```{r, include=TRUE}
+library(rpart)
+ mytree.df <- rpart(target ~ ., data = train, method = "class")
+```
+
+#9.	Report the misclassification rate and confusion table of the tree model
+```{r, include=TRUE}
+pred.df <- predict(mytree.df,test, type = "class")
+cm.df <- confusionMatrix(data = pred.df, reference = test$target)
+
+cm.df
+```
+
+#10.	Print out the tree
+```{r, include=TRUE}
+library(rattle)
+
+fancyRpartPlot(mytree.df)
+```
+
+
+#11.	Build tree model using caret package and report the confusion table 
+#Could not get this to run properly. 
+```{r}
+library(caret)
+model.df <- train(target~.,data = train, method = "rpart")
+pred2.df <- predict(model.df, test)
+
+cm2 <- confusionMatrix(pred2.df, test$target)
+
+cm2
+```
+
+#12.	Write a function, taking the input of training data percentage, to automate 7-10.  Apply the function with training data = 70%; 80%; 90%
+```{r, include=TRUE}
+model.function <- function (train.amount) {
+  
+  names(df)[15] = "target"
+library(caret)
+  splitIndex <- createDataPartition(df$target, p = train.amount , list = FALSE, times = 1)
+  train <- df[splitIndex,]
+  test <- df[-splitIndex,]
+  
+  library(rpart)
+  mytree.df <- rpart(target ~ ., data = train, method = "class")
+
+  pred.df <- predict(mytree.df,test, type = "class")
+  cm.df <- confusionMatrix(data = pred.df, reference = test$target)
+  
+  library(rattle)
+  fancyRpartPlot(mytree.df)
+  
+}
+model.function(.7)
+model.function(.8)
+model.function(.9)
+```
+
+
