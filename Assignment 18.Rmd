@@ -1,0 +1,195 @@
+---
+title: "Assignment 18"
+author: "Tavish Boyle"
+date: "December 5, 2018"
+output: word_document
+---
+
+## Questions 1-6
+```{r setup, include=TRUE}
+
+df = read.csv("C:/Users/student/Documents/Senior Year/Statistical Analysis with R/Data/hmeq.csv")
+summary(df)
+d <- df[complete.cases(df),]
+nrow(d)
+d$BAD = as.factor(d$BAD)
+names(d)[1]
+names(d)[1] = 'target'
+table(d$target)
+
+library(caret)
+library(ggplot2)
+library(lattice)
+library(ranger)
+splitIndex <-createDataPartition(d$target, p=.70, list = FALSE, times = 1)
+train <-d[splitIndex,]
+test <- d[-splitIndex,]
+
+
+
+
+
+model = ranger(target~., data = train)
+pred = predict(model, data = test)$predictions
+cm=confusionMatrix(pred, test$target, positive = "1")
+cm
+
+table(d$target)
+
+prop.table(table(d$target))
+
+train1 = train[train$target == "1",]
+nrow(train1)
+
+
+
+table(train1$target)
+
+train0 = train[train$target == '0',]
+table(train0$target)
+
+sample(1:10, 3)
+
+sample(nrow(train0), 217)
+
+sample(nrow(train0), nrow(train1))
+
+
+n=nrow(train0)
+n1 = nrow(train1)
+train0[sample(1:n, n1, replace = TRUE),]
+
+train00=train0[sample(1:n,n1, replace = TRUE),]
+
+train_under=rbind(train00,train1)
+model_under=ranger(target~.,data=train_under)
+pred_under=predict(model_under,data=test)$predictions
+cm_under=confusionMatrix(pred_under,test$target,positive="1")
+cm_under$overall['Accuracy']
+cm_under$byClass['Balanced Accuracy']
+
+
+table(train_under$target)
+##write.csv(train_under, 'train_under.csv')
+
+```
+
+## Question 7
+```{r}
+
+summary(df)
+d <- df[complete.cases(df),]
+d$BAD = as.factor(d$BAD)
+nrow(d)
+names(d)[1]
+names(d)[1] = 'target'
+table(d$target)
+
+splitIndex <-createDataPartition(d$target, p=.70, list = FALSE, times = 1)
+train <-d[splitIndex,]
+test <- d[-splitIndex,]
+
+
+
+
+
+model = ranger(target~., data = train)
+pred = predict(model, data = test)$predictions
+cm=confusionMatrix(pred, test$target, positive = "1")
+cm
+
+table(d$target)
+
+prop.table(table(d$target))
+
+train1 = train[train$target == "1",]
+nrow(train1)
+
+table(train1$target)
+
+train0 = train[train$target == '0',]
+table(train0$target)
+
+sample(1:10, 3)
+
+sample(nrow(train0), 217)
+
+sample(nrow(train0), nrow(train1))
+
+
+n0=nrow(train0)
+n1 = nrow(train1)
+train11 = train1[sample(1:n1, n0, replace = TRUE),]
+
+
+train_over=rbind(train11,train0)
+model_over=ranger(target~.,data=train_over)
+pred_over=predict(model_over,data=test)$predictions
+cm_over=confusionMatrix(pred_over,test$target,positive="1")
+cm_over$overall['Accuracy']
+cm_over$byClass['Balanced Accuracy']
+
+
+table(train_over$target)
+##write.csv(train_under, 'train_over.csv')
+```
+
+## Question 8	Write a function called Quick_bal.  This function takes
+##-	Inputs:  a dataset argument with a target variable named target; a method argument specifying undersampling or oversampling
+##-	Output: a dataset with a balanced target. 
+
+```{r}
+Quick_bal <- function(x,m){
+  names(x)[1] = 'target'
+  splitIndex <- createDataPartition(x$target, p=.70, list = FALSE, times = 1)
+  train <-d[splitIndex,]
+  test <- d[-splitIndex,]
+
+    if(m==1){
+      train1 = train[train$target == "1",]
+      train0 = train[train$target == "0",]
+      n0 = nrow(train0)
+      n1 = nrow(train1)
+      train00 = train0[sample(1:n0, n1),]
+      train_under = rbind(train00, train1)
+    }
+      if(m == 2){
+        train1 = train[train$target == "1",]
+        train0 = train[train$target == "0",]
+        n0 = nrow(train0)
+        n1 = nrow(train1)
+        train11 = train1[sample(1:n1, n0, replace = TRUE),]
+        train_over = rbind(train0, train11)
+      }
+}
+```
+
+## Question 9	Put 6 and 7 into a function called Quick_model_bal. This function takes
+##-	Inputs: a dataset with a target variable named target 
+##-	Output: the balanced accuracies of random forest with undersampling and oversampling being applied on the training dataset. 
+```{r}
+Quick_model_bal <- function(x,m){
+  names(x)[1] = 'target'
+  splitIndex <- createDataPartition(x$target, p=.70, list = FALSE, times = 1)
+  train <-d[splitIndex,]
+  test <- d[-splitIndex,]
+  
+  print("Undersample:")
+  model_under=ranger(target~.,data=train_under)
+pred_under=predict(model_under,data=test)$predictions
+cm_under=confusionMatrix(pred_under,test$target,positive="1")
+cm_under$overall['Accuracy']
+cm_under$byClass['Balanced Accuracy']
+  
+  
+  print("Oversample:")
+  train_over=rbind(train11,train0)
+model_over=ranger(target~.,data=train_over)
+pred_over=predict(model_over,data=test)$predictions
+cm_over=confusionMatrix(pred_over,test$target,positive="1")
+cm_over$overall['Accuracy']
+cm_over$byClass['Balanced Accuracy']
+}
+```
+
+
